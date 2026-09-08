@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monument Growth — Client Hub</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-name">Monument Growth</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="clients">Clients</button>
+    <button class="tab" data-view="tasks">Tasks</button>
+  </nav>
+  <div class="topbar-actions">
+    <button id="exportBtn" class="btn btn-ghost" title="Download a backup of all your data">Export</button>
+    <label class="btn btn-ghost" title="Restore from a backup file">
+      Import
+      <input type="file" id="importInput" accept="application/json" hidden>
+    </label>
+  </div>
+</header>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard-view" class="view active">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active Clients</div>
+        <div class="stat-value" id="statActiveClients">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Monthly Revenue</div>
+        <div class="stat-value" id="statMRR">$0</div>
+      </div>
+      <div class="stat-card stat-alert">
+        <div class="stat-label">Overdue Follow-ups</div>
+        <div class="stat-value" id="statOverdue">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Tasks</div>
+        <div class="stat-value" id="statTasks">0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Who to follow up with</h2>
+        <span class="panel-sub">Soonest first</span>
+      </div>
+      <div id="followupList" class="followup-list"></div>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section id="clients-view" class="view">
+    <div class="view-toolbar">
+      <input type="text" id="clientSearch" class="search-input" placeholder="Search clients or tags...">
+      <select id="statusFilter" class="select-input">
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="churned">Churned</option>
+      </select>
+      <button id="addClientBtn" class="btn btn-primary">+ Add Client</button>
+    </div>
+    <div id="clientList" class="client-list"></div>
+  </section>
+
+  <!-- TASKS -->
+  <section id="tasks-view" class="view">
+    <div class="panel task-panel">
+      <form id="taskForm" class="task-form">
+        <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off" required>
+        <select id="taskClientSelect" class="select-input">
+          <option value="">No client</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <div id="openTasks" class="task-list"></div>
+
+      <div class="completed-header" id="completedToggle">
+        <span id="completedCount">0 completed</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div id="completedTasks" class="task-list completed-list collapsed"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- CLIENT DETAIL / ADD-EDIT MODAL -->
+<div id="clientModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Client</h2>
+      <button class="modal-close" id="closeModalBtn">&times;</button>
+    </div>
+    <form id="clientForm" class="modal-body">
+      <input type="hidden" id="clientId">
+
+      <div class="form-row">
+        <label>Business / Client Name</label>
+        <input type="text" id="clientName" required>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Contact Person</label>
+          <input type="text" id="clientContact">
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="clientStatus">
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="churned">Churned</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Email</label>
+          <input type="email" id="clientEmail">
+        </div>
+        <div>
+          <label>Phone</label>
+          <input type="tel" id="clientPhone">
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label>Monthly Payment ($)</label>
+          <input type="number" id="clientAmount" min="0" step="1">
+        </div>
+        <div>
+          <label>Next Follow-up Date</label>
+          <input type="date" id="clientFollowUp">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Plan / Services</label>
+        <input type="text" id="clientPlan" placeholder="e.g. SEO + Google Ads, Social Media Management">
+      </div>
+
+      <div class="form-row">
+        <label>Tags</label>
+        <div id="tagChips" class="tag-chips"></div>
+        <div class="tag-input-row">
+          <input type="text" id="tagInput" list="tagSuggestions" placeholder="Add a tag and press Enter (e.g. Upsold)">
+          <datalist id="tagSuggestions">
+            <option value="Upsold">
+            <option value="New Client">
+            <option value="At Risk">
+            <option value="SEO">
+            <option value="Paid Ads">
+            <option value="Social Media">
+            <option value="Web Design">
+            <option value="Email Marketing">
+            <option value="VIP">
+          </datalist>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Notes</label>
+        <div id="notesLog" class="notes-log"></div>
+        <div class="note-input-row">
+          <textarea id="noteInput" rows="2" placeholder="Add a note (call summary, request, reminder...)"></textarea>
+          <button type="button" id="addNoteBtn" class="btn btn-ghost">Add Note</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="deleteClientBtn" class="btn btn-danger">Delete Client</button>
+        <div class="modal-footer-right">
+          <button type="button" id="cancelModalBtn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Client</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
