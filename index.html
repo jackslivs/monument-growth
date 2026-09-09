@@ -4,97 +4,156 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monument Growth — Client Hub</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="brand-mark"></span>
-    <span class="brand-name">Monument Growth</span>
-  </div>
-  <nav class="tabs">
-    <button class="tab active" data-view="dashboard">Dashboard</button>
-    <button class="tab" data-view="clients">Clients</button>
-    <button class="tab" data-view="tasks">Tasks</button>
-  </nav>
-  <div class="topbar-actions">
-    <button id="exportBtn" class="btn btn-ghost" title="Download a backup of all your data">Export</button>
-    <label class="btn btn-ghost" title="Restore from a backup file">
-      Import
-      <input type="file" id="importInput" accept="application/json" hidden>
-    </label>
-  </div>
-</header>
+<div class="app">
 
-<main>
-
-  <!-- DASHBOARD -->
-  <section id="dashboard-view" class="view active">
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Active Clients</div>
-        <div class="stat-value" id="statActiveClients">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Monthly Revenue</div>
-        <div class="stat-value" id="statMRR">$0</div>
-      </div>
-      <div class="stat-card stat-alert">
-        <div class="stat-label">Overdue Follow-ups</div>
-        <div class="stat-value" id="statOverdue">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Open Tasks</div>
-        <div class="stat-value" id="statTasks">0</div>
-      </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="assets/logo.svg" class="brand-mark" alt="Monument Growth">
+      <span class="brand-name">Monument<br>Growth</span>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Who to follow up with</h2>
-        <span class="panel-sub">Soonest first</span>
+    <nav class="side-nav">
+      <button class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="pipeline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="9.5" y="3" width="5" height="12" rx="1.5"/><rect x="16" y="3" width="5" height="15" rx="1.5"/></svg>
+        <span>Pipeline</span>
+      </button>
+      <button class="nav-item" data-view="clients">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Clients</span>
+      </button>
+      <button class="nav-item" data-view="tasks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Tasks</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button id="exportBtn" class="side-action" title="Download a backup of all your data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Export data</span>
+      </button>
+      <label class="side-action" title="Restore from a backup file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Import data</span>
+        <input type="file" id="importInput" accept="application/json" hidden>
+      </label>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard-view" class="view active">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="page-sub">Your business at a glance</p>
+        </div>
       </div>
-      <div id="followupList" class="followup-list"></div>
-    </div>
-  </section>
 
-  <!-- CLIENTS -->
-  <section id="clients-view" class="view">
-    <div class="view-toolbar">
-      <input type="text" id="clientSearch" class="search-input" placeholder="Search clients or tags...">
-      <select id="statusFilter" class="select-input">
-        <option value="">All statuses</option>
-        <option value="active">Active</option>
-        <option value="paused">Paused</option>
-        <option value="churned">Churned</option>
-      </select>
-      <button id="addClientBtn" class="btn btn-primary">+ Add Client</button>
-    </div>
-    <div id="clientList" class="client-list"></div>
-  </section>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Active Clients</div>
+          <div class="stat-value" id="statActiveClients">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Revenue</div>
+          <div class="stat-value" id="statMRR">$0</div>
+        </div>
+        <div class="stat-card stat-alert">
+          <div class="stat-label">Overdue Follow-ups</div>
+          <div class="stat-value" id="statOverdue">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Open Tasks</div>
+          <div class="stat-value" id="statTasks">0</div>
+        </div>
+      </div>
 
-  <!-- TASKS -->
-  <section id="tasks-view" class="view">
-    <div class="panel task-panel">
-      <form id="taskForm" class="task-form">
-        <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off" required>
-        <select id="taskClientSelect" class="select-input">
-          <option value="">No client</option>
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Who to follow up with</h2>
+          <span class="panel-sub">Soonest first</span>
+        </div>
+        <div id="followupList" class="followup-list"></div>
+      </div>
+    </section>
+
+    <!-- PIPELINE -->
+    <section id="pipeline-view" class="view">
+      <div class="page-header">
+        <div>
+          <h1>Pipeline</h1>
+          <p class="page-sub">Drag a card to move it to the next stage</p>
+        </div>
+        <button id="addLeadBtn" class="btn btn-primary">+ Add Lead</button>
+      </div>
+      <div id="pipelineBoard" class="pipeline-board"></div>
+    </section>
+
+    <!-- CLIENTS -->
+    <section id="clients-view" class="view">
+      <div class="page-header">
+        <div>
+          <h1>Clients</h1>
+          <p class="page-sub">Everyone you work with, in one place</p>
+        </div>
+        <button id="addClientBtn" class="btn btn-primary">+ Add Client</button>
+      </div>
+      <div class="view-toolbar">
+        <input type="text" id="clientSearch" class="search-input" placeholder="Search clients or tags...">
+        <select id="statusFilter" class="select-input">
+          <option value="">All stages</option>
+          <option value="lead">Lead</option>
+          <option value="contacted">Contacted</option>
+          <option value="proposal">Proposal Sent</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="churned">Churned</option>
         </select>
-        <button type="submit" class="btn btn-primary">Add</button>
-      </form>
-      <div id="openTasks" class="task-list"></div>
-
-      <div class="completed-header" id="completedToggle">
-        <span id="completedCount">0 completed</span>
-        <span class="chevron">▾</span>
       </div>
-      <div id="completedTasks" class="task-list completed-list collapsed"></div>
-    </div>
-  </section>
+      <div id="clientList" class="client-list"></div>
+    </section>
 
-</main>
+    <!-- TASKS -->
+    <section id="tasks-view" class="view">
+      <div class="page-header">
+        <div>
+          <h1>Tasks</h1>
+          <p class="page-sub">What needs doing next</p>
+        </div>
+      </div>
+      <div class="panel task-panel">
+        <form id="taskForm" class="task-form">
+          <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off" required>
+          <select id="taskClientSelect" class="select-input">
+            <option value="">No client</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+        <div id="openTasks" class="task-list"></div>
+
+        <div class="completed-header" id="completedToggle">
+          <span id="completedCount">0 completed</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div id="completedTasks" class="task-list completed-list collapsed"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
 
 <!-- CLIENT DETAIL / ADD-EDIT MODAL -->
 <div id="clientModal" class="modal-overlay hidden">
@@ -117,8 +176,11 @@
           <input type="text" id="clientContact">
         </div>
         <div>
-          <label>Status</label>
+          <label>Stage</label>
           <select id="clientStatus">
+            <option value="lead">Lead</option>
+            <option value="contacted">Contacted</option>
+            <option value="proposal">Proposal Sent</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
             <option value="churned">Churned</option>

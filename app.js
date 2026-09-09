@@ -3,6 +3,15 @@
 
   const STORAGE = { clients: "mg_clients", tasks: "mg_tasks" };
 
+  const STAGES = [
+    { key: "lead", label: "Lead" },
+    { key: "contacted", label: "Contacted" },
+    { key: "proposal", label: "Proposal Sent" },
+    { key: "active", label: "Active Client" },
+    { key: "paused", label: "Paused" },
+    { key: "churned", label: "Churned" },
+  ];
+
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -24,6 +33,8 @@
     return Math.round((target - nowMid) / 86400000);
   };
 
+  const stageLabel = (key) => (STAGES.find(s => s.key === key) || {}).label || key;
+
   // ---------- Data layer ----------
   function loadClients() {
     try { return JSON.parse(localStorage.getItem(STORAGE.clients)) || []; }
@@ -42,16 +53,17 @@
   let editingTags = [];
   let currentClientId = null;
 
-  // ---------- Tab navigation ----------
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  // ---------- Sidebar navigation ----------
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(t => t.classList.remove("active"));
       document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-      tab.classList.add("active");
-      document.getElementById(tab.dataset.view + "-view").classList.add("active");
-      if (tab.dataset.view === "dashboard") renderDashboard();
-      if (tab.dataset.view === "clients") renderClients();
-      if (tab.dataset.view === "tasks") renderTasks();
+      item.classList.add("active");
+      document.getElementById(item.dataset.view + "-view").classList.add("active");
+      if (item.dataset.view === "dashboard") renderDashboard();
+      if (item.dataset.view === "pipeline") renderPipeline();
+      if (item.dataset.view === "clients") renderClients();
+      if (item.dataset.view === "tasks") renderTasks();
     });
   });
 
@@ -116,6 +128,94 @@
     });
   }
 
+  // ---------- Pipeline ----------
+  let draggingId = null;
+
+  function renderPipeline() {
+    const board = document.getElementById("pipelineBoard");
+    board.innerHTML = "";
+
+    STAGES.forEach(stage => {
+      const stageClients = clients.filter(c => c.status === stage.key);
+      const value = stageClients.reduce((sum, c) => sum + (Number(c.monthlyAmount) || 0), 0);
+
+      const col = document.createElement("div");
+      col.className = "pipeline-column";
+      col.dataset.stage = stage.key;
+
+      col.innerHTML = `
+        <div class="pipeline-col-header">
+          <div class="pipeline-col-title">
+            <span class="pipeline-col-dot stage-${stage.key}" style="background:currentColor" ></span>
+            ${stage.label}
+          </div>
+          <div class="pipeline-col-meta">${stageClients.length} · ${fmtMoney(value)}/mo</div>
+        </div>
+        <div class="pipeline-col-body"></div>
+      `;
+      col.querySelector(".pipeline-col-dot").classList.add("stage-dot-" + stage.key);
+
+      const body = col.querySelector(".pipeline-col-body");
+      if (!stageClients.length) {
+        body.innerHTML = `<div class="pipeline-empty">No clients here</div>`;
+      } else {
+        stageClients.forEach(c => body.appendChild(buildPipelineCard(c)));
+      }
+
+      col.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        col.classList.add("drag-over");
+      });
+      col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+      col.addEventListener("drop", (e) => {
+        e.preventDefault();
+        col.classList.remove("drag-over");
+        if (!draggingId) return;
+        const c = clients.find(x => x.id === draggingId);
+        if (c && c.status !== stage.key) {
+          c.status = stage.key;
+          saveClients(clients);
+          renderPipeline();
+        }
+      });
+
+      board.appendChild(col);
+    });
+  }
+
+  function buildPipelineCard(c) {
+    const card = document.createElement("div");
+    card.className = "pipeline-card";
+    card.draggable = true;
+
+    const d = c.nextFollowUp ? daysUntil(c.nextFollowUp) : null;
+    const fLabel = d === null ? "" : d < 0 ? `${Math.abs(d)}d overdue` : d === 0 ? "Today" : fmtDate(c.nextFollowUp);
+    const fCls = d !== null && d < 0 ? "overdue" : "";
+
+    card.innerHTML = `
+      <div class="pipeline-card-name">${escapeHtml(c.name)}</div>
+      ${c.plan ? `<div class="pipeline-card-plan">${escapeHtml(c.plan)}</div>` : ""}
+      <div class="pipeline-card-footer">
+        <span class="pipeline-card-amount">${fmtMoney(c.monthlyAmount)}/mo</span>
+        ${fLabel ? `<span class="pipeline-card-followup ${fCls}">${fLabel}</span>` : ""}
+      </div>
+    `;
+
+    card.addEventListener("dragstart", () => {
+      draggingId = c.id;
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", () => {
+      draggingId = null;
+      card.classList.remove("dragging");
+    });
+    card.addEventListener("click", () => openClientModal(c.id));
+
+    return card;
+  }
+
+  document.getElementById("addLeadBtn").addEventListener("click", () => openClientModal(null, "lead"));
+
   // ---------- Clients ----------
   function renderClients() {
     const search = document.getElementById("clientSearch").value.trim().toLowerCase();
@@ -148,7 +248,7 @@
       card.innerHTML = `
         <div class="client-main">
           <div class="client-name-row">
-            <span class="status-dot status-${c.status}"></span>
+            <span class="stage-badge stage-${c.status}">${stageLabel(c.status)}</span>
             <span class="client-name">${escapeHtml(c.name)}</span>
           </div>
           ${c.plan ? `<div class="client-plan">${escapeHtml(c.plan)}</div>` : ""}
@@ -171,7 +271,7 @@
   const modal = document.getElementById("clientModal");
   const clientForm = document.getElementById("clientForm");
 
-  function openClientModal(id) {
+  function openClientModal(id, defaultStage) {
     currentClientId = id || null;
     const c = id ? clients.find(x => x.id === id) : null;
 
@@ -179,7 +279,7 @@
     document.getElementById("clientId").value = c ? c.id : "";
     document.getElementById("clientName").value = c ? c.name : "";
     document.getElementById("clientContact").value = c ? c.contactPerson || "" : "";
-    document.getElementById("clientStatus").value = c ? c.status : "active";
+    document.getElementById("clientStatus").value = c ? c.status : (defaultStage || "lead");
     document.getElementById("clientEmail").value = c ? c.email || "" : "";
     document.getElementById("clientPhone").value = c ? c.phone || "" : "";
     document.getElementById("clientAmount").value = c ? c.monthlyAmount || "" : "";
@@ -294,6 +394,7 @@
     closeClientModal();
     renderClients();
     renderDashboard();
+    renderPipeline();
     populateTaskClientSelect();
   });
 
@@ -305,6 +406,7 @@
     closeClientModal();
     renderClients();
     renderDashboard();
+    renderPipeline();
     populateTaskClientSelect();
   });
 
@@ -424,6 +526,7 @@
         saveClients(clients);
         saveTasks(tasks);
         renderDashboard();
+        renderPipeline();
         renderClients();
         renderTasks();
         populateTaskClientSelect();
@@ -443,9 +546,17 @@
     }[m]));
   }
 
+  // ---------- Migration ----------
+  // Older data only had active/paused/churned; anything else defaults to active.
+  clients.forEach(c => {
+    if (!STAGES.some(s => s.key === c.status)) c.status = "active";
+  });
+  saveClients(clients);
+
   // ---------- Init ----------
   populateTaskClientSelect();
   renderDashboard();
+  renderPipeline();
   renderClients();
   renderTasks();
 })();
